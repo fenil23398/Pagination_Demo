@@ -4,26 +4,6 @@ import './App.css';
 import PaginationPage from "./Pagination/index";
 import { Table } from 'reactstrap';
 
-// function App() {
-//   return (
-//     <div className="App">
-//       <header className="App-header">
-//         <img src={logo} className="App-logo" alt="logo" />
-//         <p>
-//           Edit <code>src/App.js</code> and save to reload.
-//         </p>
-//         <a
-//           className="App-link"
-//           href="https://reactjs.org"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           Learn React
-//         </a>
-//       </header>
-//     </div>
-//   );
-// }
 
 class App extends React.Component {
   constructor(props) {
@@ -67,58 +47,107 @@ class App extends React.Component {
     this.getUsers(finalPage);
 
   }
-  componentDidMount() {
-
-    fetch('http://localhost:5000/getUsers', {
-      method: 'GET',
+  dataRequest = (URL, methodType, params) => {
+    return fetch(URL, {
+      method: methodType,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      //body: JSON.stringify(params)
+      body: JSON.stringify(params)
     })
       .then(data => {
         return data.json()
       })
       .catch(err => {
-        //console.log("chartErr", err)
         return err
       })
   }
+  getUsers = (currentPage) => {
+    console.log("Rendering Inside GetUsers")
+    const queryParams = {};
+    queryParams["page"] = currentPage; //Page Number
+    queryParams["pagination"] = 8; //Number Of records on Page
+    this.dataRequest('http://localhost:5000/getUsers', 'POST', queryParams)
+      .then(data => {
+        console.log("Data FEtched ", data)
+        this.setState({
+          users: data.users
+        })
+      })
+      .catch(err => {
+        console.log("Error In Fetching Users ", err)
+      })
+  }
+  getUsersCount = () => {
+    //Passing /1 as Backend Uses same query so if argument then it will return count
+    this.dataRequest('http://localhost:5000/getUsers/1', 'GET')
+      .then(data => {
+        this.setState({
+          totalUsers: data.cnt
+        }, //call is for first page records only
+          () => this.getUsers(this.state.currentPage))
+      })
+  }
+  componentDidMount() {
+    this.getUsersCount()
+  }
   render() {
+    let numberOfPages = 0;
+    if (this.state.totalUsers % 8 === 0)
+      numberOfPages = Math.floor(this.state.totalUsers / 8);
+    else
+      numberOfPages = Math.floor(this.state.totalUsers / 8) + 1;
     return (
-      <div className="App">
-        <Table hover>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Username</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">1</th>
-              <td>Mark</td>
-              <td>Otto</td>
-              <td>@mdo</td>
-            </tr>
-            <tr>
-              <th scope="row">2</th>
-              <td>Jacob</td>
-              <td>Thornton</td>
-              <td>@fat</td>
-            </tr>
-            <tr>
-              <th scope="row">3</th>
-              <td>Larry</td>
-              <td>the Bird</td>
-              <td>@twitter</td>
-            </tr>
-          </tbody>
-        </Table>
-      </div>
+
+      <div className="container" style={{marginLeft : "10%",width:"70%",marginTop : "3%"}}>
+        <div>
+          {
+            this.state.users.length > 0 ?
+              <Table responsive>
+                <thead>
+                  <tr>
+                    <th>id</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email </th>
+                  </tr>
+                </thead>
+                <tbody>
+
+                  {
+                    this.state.users.map((data) => {
+                      return (
+                        <tr>
+                          <th scope="row">{data.id}</th>
+                          <td>{data.first_name}</td>
+                          <td>{data.last_name}</td>
+                          <td>{data.email}</td>
+                        </tr>
+                      )
+                    })
+                  }
+
+                </tbody>
+              </Table>
+              :
+              "No Data"
+          }
+        </div>
+        {
+          this.state.totalUsers > 8 &&
+          <PaginationPage
+            pages={numberOfPages}
+            nextPage={this.nextpage}
+            currentPage={this.state.currentPage}
+            hundreadChange={this.hundreadChange}
+            tenChange={this.tenChange}
+          >
+          </PaginationPage>
+       }
+      
+      </div >
+     
     );
   }
 }

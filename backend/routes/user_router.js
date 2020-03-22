@@ -27,6 +27,7 @@ router.post("/",function(req,res){
     const pageNumber = req.body.page ? parseInt(req.body.page) : 1;
     userss.find({})
         //skip takes argument to skip number of entries 
+        .sort({"id" : 1})
         .skip((pageNumber - 1) * pagination)
         //limit is number of Records we want to display
         .limit(pagination)
